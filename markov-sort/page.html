@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style type="text/css">
+        body {
+            margin: 40px auto;
+            #max-width: 650px;
+            line-height: 1.6;
+            font-size: 20px;
+            padding: 0 10px
+        }
+        h1,h2,h3 {
+            line-height:1.2
+        }
+        </style>
+    </head>
+    <body>
+        <div id="buttons"></div>
+        <!--
+        <button id="clear">Clear</button>
+        <button id="paint">Paint</button>
+        <button id="step">Step</button>
+        <button id="print_str">Print str</button>
+        -->
+        <button id="reset">Reset</button>
+        <button id="run">Run</button>
+        <br>
+        <canvas id="demo-canvas"></canvas>
+    </body>
+    <script type="module">
+        var running = null;
+
+      async function init() {
+        const { instance } = await WebAssembly.instantiateStreaming(
+          fetch("./sort.wasm")
+        );
+
+        console.log(instance.exports.BUFFER);
+        const width = new Uint32Array(instance.exports.memory.buffer, instance.exports.WIDTH.value, 1)[0];
+        const height = new Uint32Array(instance.exports.memory.buffer, instance.exports.HEIGHT.value, 1)[0];
+        console.log(width, height);
+
+        const canvas = document.getElementById("demo-canvas");
+        // This is what gives us that blocky pixel styling, rather than a blend between pixels.
+        canvas.style.cssText = 
+            'image-rendering: optimizeSpeed;' + // FireFox < 6.0
+            'image-rendering: -moz-crisp-edges;' + // FireFox
+            'image-rendering: -o-crisp-edges;' +  // Opera
+            'image-rendering: -webkit-crisp-edges;' + // Chrome
+            'image-rendering: crisp-edges;' + // Chrome
+            'image-rendering: -webkit-optimize-contrast;' + // Safari
+            'image-rendering: pixelated; ' + // Future browsers
+            '-ms-interpolation-mode: nearest-neighbor;'; // IE
+        canvas.width = width;
+        canvas.height = height;
+        const canvasScale = 2;
+        canvas.style.width = width * canvasScale + "px";
+        canvas.style.height = height * canvasScale + "px";
+
+        const buffer_address = instance.exports.BUFFER.value;
+        //const buffer_address = new Uint32Array(instance.exports.memory.buffer, instance.exports.BUFFER.value, 1)[0];
+        console.log(buffer_address);
+        const clampArr = new Uint8ClampedArray(
+                instance.exports.memory.buffer,
+                buffer_address,
+                4 * width * height,
+        );
+        const image = new ImageData(
+            clampArr,
+            width,
+        );
+
+        const ctx = canvas.getContext("2d");
+
+        var button = document.getElementById("run");
+        button.onclick = function() {
+            if (!running) {
+                running = setInterval(
+                () => {
+                    instance.exports.ex_step();
+                    instance.exports.ex_render();
+                    ctx.putImageData(image, 0, 0);
+                }, 100);
+            }
+        };
+
+        var resetFun = function() {
+            console.log(running);
+            clearInterval(running);
+            running = null;
+            console.log(running);
+            instance.exports.ex_init();
+            instance.exports.ex_render();
+            ctx.putImageData(image, 0, 0);
+        };
+
+        button = document.getElementById("reset");
+        button.onclick = resetFun;
+
+        resetFun();
+      }
+
+      init();
+    </script>
+</html>
+
