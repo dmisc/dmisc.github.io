@@ -4,7 +4,7 @@
         <style type="text/css">
         body {
             margin: 40px auto;
-            #max-width: 650px;
+            max-width: 650px;
             line-height: 1.6;
             font-size: 20px;
             padding: 0 10px
@@ -15,24 +15,99 @@
         </style>
     </head>
     <body>
+        <h1><a href="../..">Main page</a> / Bubble sort in Markov algorithm</h1>
         <div id="buttons"></div>
-        <!--
-        <button id="clear">Clear</button>
-        <button id="paint">Paint</button>
-        <button id="step">Step</button>
-        <button id="print_str">Print str</button>
-        -->
         <button id="reset">Reset</button>
         <button id="run">Run</button>
         <br>
         <canvas id="demo-canvas"></canvas>
+        <h3>Algorithm description</h3>
+            Background: <a href="https://en.wikipedia.org/wiki/Markov_algorithm">https://en.wikipedia.org/wiki/Markov_algorithm</a>
+            <ol>
+                <li>Generate <b>@</b> symbol at the beginning of the string</li>
+                <li><b>@</b> travels to the end of the string, replacing integer separator <b>,</b> with <b>?</b></li>
+                <li><b>?</b> compares values and produces one of: <b>&lt; &gt; =</b></li>
+                <li><b>&lt;</b> and <b>=</b> become <b>,</b> again. <b>&gt;</b> is replaced by <b>aS$</b></li>
+                <li><b>$</b> travels to the end of the string and removes <b>@</b>, thus forcing another <b>@</b> pass after all comparisons and swaps are complete</li>
+                <li><b>aS</b> swaps two integers</li>
+                <li>If <b>@</b> exists at the end of the string after all other rules, it means no swaps were triggered by comparing every integer, so the list is sorted</li>
+            </ol>
+        <h3>Rules</h3>
+            <span style="white-space: pre; font-family: monospace;">$0 -> 0$
+$1 -> 1$
+$< -> <$
+$> -> >$
+$= -> =$
+$, -> ,$
+$$ -> $
+$@ -> 
+@$ -> 
+0b0 -> 00b
+0b1 -> 10b
+1b0 -> 01b
+1b1 -> 11b
+0bS -> S0b
+1bS -> S1b
+0bq -> q0
+1bq -> q1
+0b -> q0
+1b -> q1
+0a -> a0b
+1a -> a1b
+@0 -> 0@
+@1 -> 1@
+@, -> ?@
+0(0 -> (00
+0(1 -> (10
+1(0 -> (01
+1(1 -> (11
+?(0 -> (0?
+?(1 -> (1?
+#(00 -> 0#
+#(11 -> 1#
+#(10 -> 0<)
+#(01 -> 1>)
+#(0 -> <)
+#(1 -> <)
+(00 -> 0#
+(11 -> 1#
+(10 -> 0<)
+(01 -> 1>)
+*0 -> 0*
+*1 -> 1*
+*~ -> 
+<)0 -> 0<)
+<)1 -> 1<)
+>)0 -> 0>)
+>)1 -> 1>)
+>)? -> >*
+<)? -> <*
+~1 -> (11~
+~0 -> (00~
+~ -> (=
+1(= -> (=1
+0(= -> (=0
+#?(= -> =
+?(= -> ^>
+0^ -> ^0
+1^ -> ^1
+#^ -> 
+? -> ?~
+= -> ,
+< -> ,
+> -> aS$
+aS -> 
+q -> ,
+@ ->.  
+ -> @
+            </span>
     </body>
     <script type="module">
         var running = null;
 
       async function init() {
         const { instance } = await WebAssembly.instantiateStreaming(
-          fetch("./sort.wasm")
+          fetch("./module.wasm")
         );
 
         console.log(instance.exports.BUFFER);
@@ -78,7 +153,6 @@
                 running = setInterval(
                 () => {
                     instance.exports.ex_step();
-                    instance.exports.ex_render();
                     ctx.putImageData(image, 0, 0);
                 }, 100);
             }
@@ -90,7 +164,6 @@
             running = null;
             console.log(running);
             instance.exports.ex_init();
-            instance.exports.ex_render();
             ctx.putImageData(image, 0, 0);
         };
 
