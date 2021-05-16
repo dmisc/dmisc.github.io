@@ -2,7 +2,7 @@
 <html>
     <head>
         <style type="text/css">
-        body {
+        .textstyle {
             margin: 40px auto;
             max-width: 650px;
             line-height: 1.6;
@@ -12,95 +12,106 @@
         h1,h2,h3 {
             line-height:1.2
         }
+        .aligncenter {
+            text-align: center;
+            #all: initial;
+        }
         </style>
     </head>
     <body>
-        <h1><a href="../..">Main page</a> / Bubble sort in Markov algorithm</h1>
-        <div id="buttons"></div>
-        <button id="reset">Reset</button>
-        <button id="run">Run</button>
-        <br>
-        <canvas id="demo-canvas"></canvas>
-        <h3>Algorithm description</h3>
-            Background: <a href="https://en.wikipedia.org/wiki/Markov_algorithm">https://en.wikipedia.org/wiki/Markov_algorithm</a>
-            <ol>
-                <li>Generate <b>@</b> symbol at the beginning of the string</li>
-                <li><b>@</b> travels to the end of the string, replacing integer separator <b>,</b> with <b>?</b></li>
-                <li><b>?</b> compares values and produces one of: <b>&lt; &gt; =</b></li>
-                <li><b>&lt;</b> and <b>=</b> become <b>,</b> again. <b>&gt;</b> is replaced by <b>aS$</b></li>
-                <li><b>$</b> travels to the end of the string and removes <b>@</b>, thus forcing another <b>@</b> pass after all comparisons and swaps are complete</li>
-                <li><b>aS</b> swaps two integers</li>
-                <li>If <b>@</b> exists at the end of the string after all other rules, it means no swaps were triggered by comparing every integer, so the list is sorted</li>
-            </ol>
-        <h3>Rules</h3>
-            <span style="white-space: pre; font-family: monospace;">$0 -> 0$
-$1 -> 1$
-$< -> <$
-$> -> >$
-$= -> =$
-$, -> ,$
-$$ -> $
-$@ -> 
-@$ -> 
-0b0 -> 00b
-0b1 -> 10b
-1b0 -> 01b
-1b1 -> 11b
-0bS -> S0b
-1bS -> S1b
-0bq -> q0
-1bq -> q1
-0b -> q0
-1b -> q1
-0a -> a0b
-1a -> a1b
-@0 -> 0@
-@1 -> 1@
-@, -> ?@
-0(0 -> (00
-0(1 -> (10
-1(0 -> (01
-1(1 -> (11
-?(0 -> (0?
-?(1 -> (1?
-#(00 -> 0#
-#(11 -> 1#
-#(10 -> 0<)
-#(01 -> 1>)
-#(0 -> <)
-#(1 -> <)
-(00 -> 0#
-(11 -> 1#
-(10 -> 0<)
-(01 -> 1>)
-*0 -> 0*
-*1 -> 1*
-*~ -> 
-<)0 -> 0<)
-<)1 -> 1<)
->)0 -> 0>)
->)1 -> 1>)
->)? -> >*
-<)? -> <*
-~1 -> (11~
-~0 -> (00~
-~ -> (=
-1(= -> (=1
-0(= -> (=0
-#?(= -> =
-?(= -> ^>
-0^ -> ^0
-1^ -> ^1
-#^ -> 
-? -> ?~
-= -> ,
-< -> ,
-> -> aS$
-aS -> 
-q -> ,
-@ ->.  
- -> @
-            </span>
+        <div class="textstyle">
+            <h1><a href="../..">Main page</a> / Bubble sort in Markov algorithm</h1>
+            <div id="buttons"></div>
+            <button id="reset">Reset</button>
+            <button id="run">Run</button>
+            <br>
+        </div>
+        <p class="aligncenter">
+            <canvas id="demo-canvas"></canvas>
+        </p>
+        <div class="textstyle">
+            <h3>Algorithm description</h3>
+                Background: <a href="https://en.wikipedia.org/wiki/Markov_algorithm">https://en.wikipedia.org/wiki/Markov_algorithm</a>
+                <ol>
+                    <li>Generate <b>@</b> symbol at the beginning of the string</li>
+                    <li><b>@</b> travels to the end of the string, replacing integer separator <b>,</b> with <b>?</b></li>
+                    <li><b>?</b> compares values and produces one of: <b>&lt; &gt; =</b></li>
+                    <li><b>&lt;</b> and <b>=</b> become <b>,</b> again. <b>&gt;</b> is replaced by <b>sS$</b></li>
+                    <li><b>$</b> travels to the end of the string and removes <b>@</b>, thus forcing another <b>@</b> pass after all comparisons and swaps are complete</li>
+                    <li><b>sS</b> swaps two integers</li>
+                    <li>If <b>@</b> exists at the end of the string after all other rules, it means no swaps were triggered by comparing every integer, so the list is sorted</li>
+                </ol>
+            <h3>Rules</h3>
+                <span style="white-space: pre; font-family: monospace;">
+    $0 -> 0$
+    $1 -> 1$
+    $< -> <$
+    $> -> >$
+    $= -> =$
+    $, -> ,$
+    $$ -> $
+    $@ -> 
+    @$ -> 
+    0b0 -> 00b
+    0b1 -> 10b
+    1b0 -> 01b
+    1b1 -> 11b
+    0bS -> S0b
+    1bS -> S1b
+    0bq -> q0
+    1bq -> q1
+    0b -> q0
+    1b -> q1
+    0s -> s0b
+    1s -> s1b
+    @0 -> 0@
+    @1 -> 1@
+    @, -> ?@
+    0(0 -> (00
+    0(1 -> (10
+    1(0 -> (01
+    1(1 -> (11
+    ?(0 -> (0?
+    ?(1 -> (1?
+    #(00 -> 0#
+    #(11 -> 1#
+    #(10 -> 0<)
+    #(01 -> 1>)
+    #(0 -> <)
+    #(1 -> <)
+    (00 -> 0#
+    (11 -> 1#
+    (10 -> 0<)
+    (01 -> 1>)
+    *0 -> 0*
+    *1 -> 1*
+    *~ -> 
+    <)0 -> 0<)
+    <)1 -> 1<)
+    >)0 -> 0>)
+    >)1 -> 1>)
+    >)? -> >*
+    <)? -> <*
+    ~1 -> (11~
+    ~0 -> (00~
+    ~ -> (=
+    1(= -> (=1
+    0(= -> (=0
+    #?(= -> =
+    ?(= -> ^>
+    0^ -> ^0
+    1^ -> ^1
+    #^ -> 
+    ? -> ?~
+    = -> ,
+    < -> ,
+    > -> sS$
+    sS -> 
+    q -> ,
+    @ ->.  
+     -> @
+                </span>
+        </div>
     </body>
     <script type="module">
         var running = null;
