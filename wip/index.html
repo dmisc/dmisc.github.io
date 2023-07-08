@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+
+<body style="background-color:#aaaaaa;">
+    <div id="buttons"></div>
+    <br>
+    <canvas id="demo-canvas"></canvas>
+</body>
+<script type="module">
+    function arrayBufferToString(buffer) {
+        var arr = new Uint8Array(buffer);
+        var str = String.fromCharCode.apply(String, arr);
+        if (/[\u0080-\uffff]/.test(str)) {
+            throw new Error("this string seems to contain (still encoded) multibytes");
+        }
+        return str;
+    }
+
+    function printError(instance) {
+        { // display error message
+            const error_len = new Uint32Array(instance.exports.memory.buffer, instance.exports.ERROR_LEN.value, 1)[0];
+            //console.log(error_len);
+            if (error_len > 0) {
+                const msg_address = instance.exports.ERROR_MSG.value;
+                const msg_bytes = new Uint8Array(
+                    instance.exports.memory.buffer,
+                    msg_address,
+                    error_len,
+                );
+                console.log(arrayBufferToString(msg_bytes));
+            }
+        }
+
+    }
+    async function init() {
+        const {
+            instance
+        } = await WebAssembly.instantiateStreaming(
+            //fetch("./avg_cell/avg_cell.wasm")
+            //fetch("./noise_gradient/noise_gradient.wasm")
+            //fetch("./markov_algo/markov_ui.wasm")
+            fetch("./wasm_test.wasm")
+            //fetch("./abelian_sandpile/abelian_sandpile.wasm")
+            //fetch("wasm_test/www/wasm_test.wasm")
+        );
+
+        for (var elem in instance.exports) {
+            console.log(elem);
+            if (!elem.startsWith("ex_")) {
+                continue;
+            }
+            var btn = document.createElement("button");
+            btn.appendChild(document.createTextNode(elem));
+            var btnDiv = document.getElementById("buttons");
+            btnDiv.appendChild(btn);
+
+            btn.onclick = function(x) {
+                return function() {
+                    instance.exports[x]();
+                    ctx.putImageData(image, 0, 0);
+                }
+            }(elem);
+        }
+
+        console.log(instance.exports.BUFFER);
+        const width = new Uint32Array(instance.exports.memory.buffer, instance.exports.WIDTH_.value, 1)[0];
+        const height = new Uint32Array(instance.exports.memory.buffer, instance.exports.HEIGHT_.value, 1)[0];
+        console.log("Canvas size: ", width, height);
+
+        const canvas = document.getElementById("demo-canvas");
+        // This is what gives us that blocky pixel styling, rather than a blend between pixels.
+        canvas.style.cssText =
+            'image-rendering: optimizeSpeed;' + // FireFox < 6.0
+            'image-rendering: -moz-crisp-edges;' + // FireFox
+            'image-rendering: -o-crisp-edges;' + // Opera
+            'image-rendering: -webkit-crisp-edges;' + // Chrome
+            'image-rendering: crisp-edges;' + // Chrome
+            'image-rendering: -webkit-optimize-contrast;' + // Safari
+            'image-rendering: pixelated; ' + // Future browsers
+            '-ms-interpolation-mode: nearest-neighbor;'; // IE
+        canvas.width = width;
+        canvas.height = height;
+        const canvasScale = 2;
+        canvas.style.width = width * canvasScale + "px";
+        canvas.style.height = height * canvasScale + "px";
+        console.log(canvas.width, canvas.height, canvas.style.width, canvas.style.height);
+
+        const buffer_address = instance.exports.BUFFER.value;
+        const clampArr = new Uint8ClampedArray(
+            instance.exports.memory.buffer,
+            buffer_address,
+            4 * width * height,
+        );
+        const image = new ImageData(
+            clampArr,
+            width,
+        );
+        const ctx = canvas.getContext("2d");
+
+        { // canvas mouse events
+            canvas.addEventListener('mousemove', function(e) {
+                const pos = getCursorPosition(canvas, e)
+                if (0 <= pos[0] && pos[0] < canvas.width &&
+                    0 <= pos[1] && pos[1] < canvas.height) {
+                    try {
+                        instance.exports.ex_mouse_move(pos[0], pos[1]);
+                    } catch (error) {}
+                }
+            })
+        }
+
+
+        instance.exports.ex_init();
+        const render = () => {
+            //console.log("render");
+            printError(instance);
+            for (var i = 0; i < 1; i += 1) {
+                instance.exports.ex_step();
+            }
+            ctx.putImageData(image, 0, 0);
+            requestAnimationFrame(render);
+            //setTimeout(render, 300);
+
+            printError(instance);
+        };
+        render();
+    }
+
+    function getCursorPosition(canvas, event) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const x = (event.clientX - rect.left - 1) * scaleX;
+        const y = (event.clientY - rect.top - 1) * scaleY;
+        return [x, y];
+
+        //const bb = canvas.getBoundingClientRect();
+        //const x = Math.floor( (event.clientX - bb.left) / bb.width * canvas.width );
+        //const y = Math.floor( (event.clientY - bb.top) / bb.height * canvas.height );
+        //return [x,y];
+    }
+
+
+    init();
+</script>
+
+</html>
