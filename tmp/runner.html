@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+
+<body style="background-color:#aaaaaa;">
+    <div id="buttons"></div>
+    <br>
+    <canvas id="demo-canvas"></canvas>
+</body>
+<script type="module">
+    function arrayBufferToString(buffer) {
+        var arr = new Uint8Array(buffer);
+        var str = String.fromCharCode.apply(String, arr);
+        if (/[\u0080-\uffff]/.test(str)) {
+            throw new Error("this string seems to contain (still encoded) multibytes");
+        }
+        return str;
+    }
+
+    function findErrorState(instance) {
+        var errState = {};
+        for (const name of Object.keys(instance.exports)) {
+            if (name.endsWith("_MSG")) {
+                console.log("Found MSG string: ", name);
+                const msg_gen = new Int32Array(instance.exports.memory.buffer, instance.exports[name+"_GENERATION"].value, 1)[0];
+                errState[name] = msg_gen;
+                if (msg_gen != 0) {
+                    throw new Error("Unexpected error generation: " + msg_gen);
+                }
+            }
+		}
+        return errState;
+	}
+    function checkErrorState(instance, errState) {
+    // TODO: use DataView: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DataView
+    // TODO: check the type of instance.exports[name] (.value)
+        for (const name of Object.keys(errState)) {
+            const msg_gen = new Int32Array(instance.exports.memory.buffer, instance.exports[name+"_GENERATION"].value, 1)[0];
+            if (msg_gen != errState[name]) {
+                errState[name] = msg_gen;
+                const msg_len = new Int32Array(instance.exports.memory.buffer, instance.exports[name+"_LEN"].value, 1)[0];
+                if (msg_len == -1) {
+                    console.log("Wasm failed to write the message (check buffer len):", name);
+                } else if (msg_len > 0) {
+                    const msg_address = instance.exports[name].value;
+                    const msg_bytes = new Uint8Array(
+                        instance.exports.memory.buffer,
+                        msg_address,
+                        msg_len,
+                    );
+                    let error_msg = arrayBufferToString(msg_bytes);
+                    console.log("New message: ", name);
+                    console.log(error_msg);
+                } else {
+                    console.log("WARNING: GENERATION IS NEW BUT MESSAGE IS MISSING:", name);
+                    const msg_address = instance.exports[name].value;
+                    const msg_bytes = new Uint8Array(
+                        instance.exports.memory.buffer,
+                        msg_address,
+                        5,
+                    );
+                    let error_msg = arrayBufferToString(msg_bytes);
+                    console.log("TRYING 5 BYTES OF THE MESSAGE: ", name);
+                    console.log(error_msg);
+                    const msg_len2 = new Int32Array(instance.exports.memory.buffer, instance.exports[name+"_LEN"].value, 1)[0];
+                    console.log("CHECKING LEN AGAIN:", msg_len2);
+
+                }
+            }
+		}
+    }
+    /*
+    function printError(instance) {
+        { // display error message
+            const error_len = new Uint32Array(instance.exports.memory.buffer, instance.exports.PANIC_LEN.value, 1)[0];
+            if (error_len > 0) {
+                const msg_address = instance.exports.PANIC_MSG.value;
+                const msg_bytes = new Uint8Array(
+                    instance.exports.memory.buffer,
+                    msg_address,
+                    error_len,
+                );
+                let error_msg = arrayBufferToString(msg_bytes);
+                if (error_msg != OLD_PANIC_MSG) {
+                    console.log("NEW PANIC MSG:");
+                            console.log(error_msg);
+                    OLD_PANIC_MSG = error_msg;
+                }
+                printError2(instance);
+            }
+        }
+    }
+    */
+    async function init() {
+        const {
+            instance
+        } = await WebAssembly.instantiateStreaming(
+            //fetch("./avg_cell/avg_cell.wasm")
+            //fetch("./noise_gradient/noise_gradient.wasm")
+            //fetch("./markov_algo/markov_ui.wasm")
+            ///fetch("traffic/web/traffic.wasm")
+            //fetch("./abelian_sandpile/abelian_sandpile.wasm")
+            ////fetch("wasm_test/web/wasm_test.wasm")
+
+            //fetch("langton_ant_rs/web/langton_ant_rs.wasm")
+
+            fetch(new URLSearchParams(window.location.search).get("wasm_path"))
+        );
+
+        var errState = findErrorState(instance);
+        for (var elem in instance.exports) {
+            console.log(elem);
+            if (!elem.startsWith("ex_")) {
+                continue;
+            }
+            var btn = document.createElement("button");
+            btn.appendChild(document.createTextNode(elem));
+            var btnDiv = document.getElementById("buttons");
+            btnDiv.appendChild(btn);
+
+            btn.onclick = function(x) {
+                return function() {
+                    try {
+                        instance.exports[x]();
+                    } catch (error) {
+                        console.error("CAUGHT ERROR: ", error);
+                        console.log("error state before checking: ", errState);
+                        checkErrorState(instance, errState);
+                        console.log("error state after checking: ", errState);
+                    }
+                    //ctx.putImageData(image, 0, 0);
+                }
+            }(elem);
+        }
+
+        //const width = new Uint32Array(instance.exports.memory.buffer, instance.exports.WIDTH_.value, 1)[0];
+        //const height = new Uint32Array(instance.exports.memory.buffer, instance.exports.HEIGHT_.value, 1)[0];
+
+        const width = instance.exports.ex_get_width();
+        const height = instance.exports.ex_get_height();
+        console.log("Canvas size: ", width, height);
+
+        const canvas = document.getElementById("demo-canvas");
+        // This is what gives us that blocky pixel styling, rather than a blend between pixels.
+        canvas.style.cssText =
+            'image-rendering: optimizeSpeed;' + // FireFox < 6.0
+            'image-rendering: -moz-crisp-edges;' + // FireFox
+            'image-rendering: -o-crisp-edges;' + // Opera
+            'image-rendering: -webkit-crisp-edges;' + // Chrome
+            'image-rendering: crisp-edges;' + // Chrome
+            'image-rendering: -webkit-optimize-contrast;' + // Safari
+            'image-rendering: pixelated; ' + // Future browsers
+            '-ms-interpolation-mode: nearest-neighbor;'; // IE
+        canvas.width = width;
+        canvas.height = height;
+        const canvasScale = 1;
+        canvas.style.width = width * canvasScale + "px";
+        canvas.style.height = height * canvasScale + "px";
+        console.log(canvas.width, canvas.height, canvas.style.width, canvas.style.height);
+
+        const buffer_address = instance.exports.BUFFER.value;
+        const clampArr = new Uint8ClampedArray(
+            instance.exports.memory.buffer,
+            buffer_address,
+            4 * width * height,
+        );
+        const image = new ImageData(
+            clampArr,
+            width,
+        );
+        const ctx = canvas.getContext("2d");
+
+        // TODO: add event listener only if the module has ex_mouse* functions
+        { // canvas mouse events
+            canvas.addEventListener('mousemove', function(e) {
+                const pos = getCursorPosition(canvas, e)
+                if (0 <= pos[0] && pos[0] < canvas.width &&
+                    0 <= pos[1] && pos[1] < canvas.height) {
+                    try {
+                        instance.exports.ex_mouse_move(pos[0], pos[1]);
+                    } catch (error) {}
+                }
+            })
+        }
+
+
+        instance.exports.ex_init();
+        console.log("first error state: ", errState);
+        checkErrorState(instance, errState);
+
+        /*
+        for (const name of Object.keys(instance.exports)) {
+            console.log("instance.exports: ", name);
+            console.log(instance.exports[name]);
+        }
+        */
+        const render = () => {
+            //console.log("render");
+            //printError(instance);
+            for (var i = 0; i < 1; i += 1) {
+                try {
+                    instance.exports.ex_step();
+                    checkErrorState(instance, errState);
+                    //console.log(errState);
+                } catch (error) {
+                    console.error("CAUGHT ERROR: ", error);
+                    console.log("error state before checking: ", errState);
+                    checkErrorState(instance, errState);
+                    console.log("error state after checking: ", errState);
+                    return;
+                }
+            }
+            ctx.putImageData(image, 0, 0);
+            requestAnimationFrame(render);
+            //setTimeout(render, 300);
+        };
+        render();
+    }
+
+    function getCursorPosition(canvas, event) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const x = (event.clientX - rect.left - 1) * scaleX;
+        const y = (event.clientY - rect.top - 1) * scaleY;
+        return [x, y];
+
+        //const bb = canvas.getBoundingClientRect();
+        //const x = Math.floor( (event.clientX - bb.left) / bb.width * canvas.width );
+        //const y = Math.floor( (event.clientY - bb.top) / bb.height * canvas.height );
+        //return [x,y];
+    }
+
+
+    init();
+</script>
+
+</html>
